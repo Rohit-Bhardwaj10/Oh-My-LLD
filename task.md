@@ -1,0 +1,12 @@
+- `[x]` Update `server/prisma/schema.prisma` with domain models (User, Problem, Attempt, Stage, Evaluation)
+- `[x]` Run `npx prisma db push` and `npx prisma generate` in `server`
+- `[x]` Create `server/prisma/seed.ts` and run it to seed Problems
+- `[x]` Install backend dependencies (`express`, `cors`, `better-auth`, etc.)
+- `[x]` Set up `server/src/auth.ts` and `server/src/index.ts`
+- `[x]` Install `better-auth` client in `web`
+- `[x]` Create `web/lib/auth-client.ts`
+- `[x]` Create `web/middleware.ts` to protect `/problems` and `/attempts`
+- `[x]` Create `web/app/(auth)/login/page.tsx` and `web/app/(auth)/signup/page.tsx`
+- `[x]` Add global styles in `web/app/globals.css`
+- `[x]` Create stub page at `web/app/problems/page.tsx`
+- `[x]` Test full flow (Signup -> Redirect to /problems -> Ensure db reflects the new user)

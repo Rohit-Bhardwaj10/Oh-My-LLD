@@ -1,0 +1,152 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- Enums ---
+
+enum StageType {
+  REQUIREMENTS
+  DESIGN
+  EXTENSION
+}
+
+enum StageStatus {
+  DRAFT
+  SUBMITTED
+  EVALUATING
+  COMPLETED
+  FAILED
+}
+
+enum AttemptStatus {
+  DRAFT
+  SUBMITTED
+  EVALUATING
+  COMPLETED
+  FAILED
+}
+
+// --- Models ---
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String?
+  emailVerified Boolean
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions      Session[]
+  accounts      Account[]
+  attempts      Attempt[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Account {
+  id            String    @id @default(uuid())
+  userId        String
+  accountId     String
+  providerId    String
+  accessToken   String?
+  refreshToken  String?
+  expiresAt     DateTime?
+  idToken       String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope         String?
+  password      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verification")
+}
+
+model Problem {
+  id           String    @id @default(uuid())
+  title        String
+  description  String
+  requirements Json      @default("[]")
+  constraints  Json      @default("[]")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  attempts     Attempt[]
+
+  @@map("problems")
+}
+
+model Attempt {
+  id         String        @id @default(uuid())
+  problemId  String        @map("problem_id")
+  learnerId  String        @map("learner_id")
+  status     AttemptStatus @default(DRAFT)
+  createdAt  DateTime      @default(now()) @map("created_at")
+
+  problem    Problem       @relation(fields: [problemId], references: [id])
+  learner    User          @relation(fields: [learnerId], references: [id])
+  stages     Stage[]
+  evaluation Evaluation?
+
+  @@map("attempts")
+}
+
+model Stage {
+  id          String      @id @default(uuid())
+  attemptId   String      @map("attempt_id")
+  stageType   StageType   @map("stage_type")
+  content     String      @default("")
+  status      StageStatus @default(DRAFT)
+  submittedAt DateTime?   @map("submitted_at")
+
+  attempt     Attempt     @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, stageType])
+  @@map("stages")
+}
+
+model Evaluation {
+  id        String   @id @default(uuid())
+  attemptId String   @unique @map("attempt_id")
+  results   Json
+  createdAt DateTime @default(now()) @map("created_at")
+
+  attempt   Attempt  @relation(fields: [attemptId], references: [id])
+
+  @@map("evaluations")
+}

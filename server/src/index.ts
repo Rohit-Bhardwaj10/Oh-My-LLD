@@ -14,9 +14,14 @@ app.use(cors({
   credentials: true,
 }));
 
+// NOTE: Do NOT use express.json() before the auth handler.
+// better-auth's toNodeHandler does its own body parsing.
+// Applying express.json() first would consume the request stream,
+// leaving better-auth with an empty body (causing 400 Bad Request).
+app.use(\"/api/auth\", toNodeHandler(auth));
+
 app.use(express.json());
 
-app.use("/api/auth", toNodeHandler(auth));
 app.use("/api/problems", problemsRouter);
 app.use("/api/attempts", attemptsRouter);
 

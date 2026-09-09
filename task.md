@@ -18,3 +18,10 @@
 - `[x]` Create `StubEvaluator.ts` and `LLMEvaluator.ts`
 - `[x]` Write unit tests for `StatusMachine`, `Stage`, `SubmissionValidator`, and `StubEvaluator`
 - `[x]` Verify all tests pass
+
+### SLICE 3: Problems API + Problem List UI
+- `[x]` Create `server/src/routes/problems.ts` (GET /api/problems, GET /api/problems/:id)
+- `[x]` Register problems router in `server/src/index.ts`
+- `[x]` Rewrite `web/app/problems/page.tsx` with glassmorphism cards
+- `[x]` Create `web/app/problems/[id]/page.tsx` with Problem/History tabs
+- `[x]` Install `lucide-react` in `web/`

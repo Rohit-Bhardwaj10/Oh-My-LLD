@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Clock, BookOpen, History } from 'lucide-react';
+import { ArrowLeft, Clock, BookOpen, History, Loader2 } from 'lucide-react';
 import { TabBar } from './TabBar';
+import { startAttempt } from './actions';
 
 interface Problem {
   id: string;
@@ -19,6 +20,7 @@ interface ProblemDetailClientProps {
 
 export function ProblemDetailClient({ problem }: ProblemDetailClientProps) {
   const [activeTab, setActiveTab] = useState<'problem' | 'history'>('problem');
+  const [isPending, startTransition] = useTransition();
 
   return (
     <main className="min-h-screen px-6 py-12 max-w-4xl mx-auto">
@@ -92,13 +94,19 @@ export function ProblemDetailClient({ problem }: ProblemDetailClientProps) {
           {/* Start CTA */}
           <div className="pt-4">
             <button
-              disabled
-              className="px-6 py-3 rounded-xl bg-violet-600 text-white font-semibold text-sm opacity-50 cursor-not-allowed"
-              title="Coming in Slice 4"
+              onClick={() => startTransition(() => startAttempt(problem.id))}
+              disabled={isPending}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Start Attempt →
+              {isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Starting…
+                </>
+              ) : (
+                'Start Attempt →'
+              )}
             </button>
-            <p className="text-slate-500 text-xs mt-2">Attempt creation coming soon.</p>
           </div>
         </div>
       )}

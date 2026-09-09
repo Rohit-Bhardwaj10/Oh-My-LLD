@@ -25,3 +25,10 @@
 - `[x]` Rewrite `web/app/problems/page.tsx` with glassmorphism cards
 - `[x]` Create `web/app/problems/[id]/page.tsx` with Problem/History tabs
 - `[x]` Install `lucide-react` in `web/`
+
+### SLICE 4: Attempt Creation + Editor
+- `[x]` Create `server/src/routes/attempts.ts` (POST, GET, PUT endpoints)
+- `[x]` Register attempts router in `server/src/index.ts`
+- `[x]` Create `web/app/problems/[id]/actions.ts` (Server Action to start attempt)
+- `[x]` Wire up "Start Attempt" button in `ProblemDetailClient.tsx`
+- `[x]` Create `web/app/problems/[id]/attempt/[attemptId]/page.tsx` (Editor)

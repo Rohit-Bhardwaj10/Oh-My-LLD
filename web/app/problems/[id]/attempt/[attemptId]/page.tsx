@@ -12,7 +12,8 @@ interface Problem {
 
 async function getProblem(problemId: string): Promise<Problem | null> {
   try {
-    const res = await fetch(`http://localhost:4000/api/problems/${problemId}`, {
+    const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:4000';
+    const res = await fetch(`${SERVER_URL}/api/problems/${problemId}`, {
       cache: 'no-store',
     });
     if (!res.ok) return null;
@@ -30,7 +31,8 @@ async function getAttempt(attemptId: string) {
       .map((c) => `${c.name}=${c.value}`)
       .join('; ');
 
-    const res = await fetch(`http://localhost:4000/api/attempts/${attemptId}`, {
+    const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:4000';
+    const res = await fetch(`${SERVER_URL}/api/attempts/${attemptId}`, {
       headers: { Cookie: cookieHeader },
       cache: 'no-store',
     });

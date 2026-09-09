@@ -26,7 +26,8 @@ export function ProblemDetailClient({ problem, initialAttempts }: ProblemDetailC
   const [activeTab, setActiveTab] = useState<'requirements' | 'constraints'>('requirements');
 
   useEffect(() => {
-    fetch(`http://localhost:4000/api/attempts?problemId=${problem.id}`, {
+    const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:4000';
+    fetch(`${SERVER_URL}/api/attempts?problemId=${problem.id}`, {
       credentials: 'include',
     })
       .then((res) => res.json())

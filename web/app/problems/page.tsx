@@ -12,7 +12,8 @@ interface Problem {
 
 async function getProblems(): Promise<Problem[]> {
   try {
-    const res = await fetch('http://localhost:4000/api/problems', {
+    const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:4000';
+    const res = await fetch(`${SERVER_URL}/api/problems`, {
       cache: 'no-store',
     });
     if (!res.ok) throw new Error('Failed to fetch');

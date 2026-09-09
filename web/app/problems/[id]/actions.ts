@@ -9,7 +9,8 @@ export async function startAttempt(problemId: string) {
     .map((c) => `${c.name}=${c.value}`)
     .join('; ');
 
-  const res = await fetch('http://localhost:4000/api/attempts', {
+  const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:4000';
+  const res = await fetch(`${SERVER_URL}/api/attempts`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

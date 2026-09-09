@@ -12,7 +12,8 @@ interface Problem {
 
 async function getProblem(id: string): Promise<Problem | null> {
   try {
-    const res = await fetch(`http://localhost:4000/api/problems/${id}`, {
+    const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:4000';
+    const res = await fetch(`${SERVER_URL}/api/problems/${id}`, {
       cache: 'no-store',
     });
     if (res.status === 404) return null;
@@ -33,7 +34,8 @@ async function getAttempts(problemId: string) {
       fetchHeaders.set(key, value);
     });
 
-    const res = await fetch(`http://localhost:4000/api/attempts?problemId=${problemId}`, {
+    const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:4000';
+    const res = await fetch(`${SERVER_URL}/api/attempts?problemId=${problemId}`, {
       headers: fetchHeaders,
       cache: 'no-store',
     });

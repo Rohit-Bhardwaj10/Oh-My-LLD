@@ -1,3 +1,8 @@
 node_modules
+node_modules_old
 
 /generated/prisma
+
+**/.env
+**/.env.*
+!**/.env.example

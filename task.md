@@ -10,3 +10,11 @@
 - `[x]` Add global styles in `web/app/globals.css`
 - `[x]` Create stub page at `web/app/problems/page.tsx`
 - `[x]` Test full flow (Signup -> Redirect to /problems -> Ensure db reflects the new user)
+
+### SLICE 2: Domain Layer
+- `[x]` Install `groq-sdk` and `vitest` in `server/`
+- `[x]` Setup `vitest.config.ts`
+- `[x]` Create `types.ts`, `Evaluator.ts`, `StatusMachine.ts`, `Stage.ts`, `Attempt.ts`, `SubmissionValidator.ts`
+- `[x]` Create `StubEvaluator.ts` and `LLMEvaluator.ts`
+- `[x]` Write unit tests for `StatusMachine`, `Stage`, `SubmissionValidator`, and `StubEvaluator`
+- `[x]` Verify all tests pass

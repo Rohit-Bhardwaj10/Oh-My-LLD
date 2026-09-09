@@ -7,13 +7,13 @@ Software engineers preparing for interviews often struggle with Low-Level Design
 I analyzed existing tools in the market to understand their gaps:
 
 - **Educative.io (Grokking the Object-Oriented Design Interview)**
-  - *Pros:* Excellent, structured content and diagrams. Good for learning patterns.
+  - *Pros:* Excellent, structured content and diagrams. Good for learning patterns (e.g., their specific breakdown of designing a Parking Lot or Elevator System).
   - *Cons:* Extremely passive. You read the solution rather than actively designing it yourself. No automated feedback on your unique design variations.
 - **Hello Interview**
   - *Pros:* AI-driven mock interviews, excellent for System Design (HLD).
-  - *Cons:* Often focuses more on high-level architecture and behavioral questions rather than granular class-level design, interfaces, and concrete design patterns required for LLD.
+  - *Cons:* Focuses on high-level architecture (e.g., choosing between Kafka vs. RabbitMQ or sharding databases) rather than granular class-level design, interfaces, and concrete OOP patterns required for LLD.
 - **NeetCode**
-  - *Pros:* Great for algorithms and basic system design fundamentals.
+  - *Pros:* Great for algorithms and basic system design fundamentals (like understanding consistent hashing or rate limiter logic).
   - *Cons:* Lacks a dedicated, interactive IDE for LLD where a user can write class structures and receive critique on principles like SOLID, DRY, and design patterns.
 
 ## 3. Identified Gaps

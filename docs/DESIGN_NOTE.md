@@ -26,6 +26,8 @@ The backend logic is driven by a clean, testable domain layer independent of the
 - `StatusMachine`: Validates state transitions (e.g., `DRAFT` -> `SUBMITTED` -> `EVALUATING` -> `COMPLETED`).
 - `SubmissionValidator`: Enforces business rules before submission (e.g., minimum character length).
 
+**Extensibility**: How would the design accommodate another submission format later (e.g., visual diagrams)? Since `Stage.content` is currently a plain string, supporting a diagram format would only require adding a `format` field to the `Stage` model and a corresponding renderer/parser on the frontend. The core domain layer and the `Evaluator` interface would remain completely unaffected.
+
 ## 4. Evaluation Approach
 We opted for a **Single-Prompt, Multi-Stage Evaluation**. Instead of making three separate LLM calls for Requirements, Design, and Extension, we send the entire context in one prompt. 
 - *Why?* LLD is holistic. The AI needs to see if the Design actually satisfies the Requirements, and if the Extension makes sense given the Design.

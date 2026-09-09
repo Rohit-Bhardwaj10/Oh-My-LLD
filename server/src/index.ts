@@ -18,7 +18,7 @@ app.use(cors({
 // better-auth's toNodeHandler does its own body parsing.
 // Applying express.json() first would consume the request stream,
 // leaving better-auth with an empty body (causing 400 Bad Request).
-app.use(\"/api/auth\", toNodeHandler(auth));
+app.use("/api/auth", toNodeHandler(auth));
 
 app.use(express.json());
 
@@ -39,4 +39,3 @@ setInterval(async () => {
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });
-

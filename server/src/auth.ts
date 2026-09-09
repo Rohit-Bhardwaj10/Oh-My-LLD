@@ -7,7 +7,40 @@ import "dotenv/config";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
 const adapter = new PrismaPg(pool);
-export const prisma = new PrismaClient({ adapter });
+const basePrisma = new PrismaClient({ adapter });
+
+export const prisma = basePrisma.$extends({
+  query: {
+    $allModels: {
+      async $allOperations({ model, operation, args, query }) {
+        const maxRetries = 3;
+        const delayMs = 2000;
+        
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            return await query(args);
+          } catch (error: any) {
+            const isConnectionError = 
+              error.code === 'P1001' || 
+              error.code === 'P2024' ||
+              error.message?.toLowerCase().includes('socket') || 
+              error.message?.toLowerCase().includes('connect') ||
+              error.message?.toLowerCase().includes('terminate') ||
+              error.message?.toLowerCase().includes('timeout') ||
+              error.message?.toLowerCase().includes('closed');
+
+            if (isConnectionError && attempt < maxRetries) {
+              console.log(`[Neon Wakeup] Database connection error on ${model}.${operation}. Retrying attempt ${attempt + 1}/${maxRetries} in ${delayMs}ms...`);
+              await new Promise(resolve => setTimeout(resolve, delayMs));
+              continue;
+            }
+            throw error;
+          }
+        }
+      }
+    }
+  }
+}) as unknown as PrismaClient;
 
 export const auth = betterAuth({
   logger: { level: "debug" },

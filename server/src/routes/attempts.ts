@@ -1,6 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { fromNodeHeaders } from 'better-auth/node';
 import { prisma, auth } from '../auth';
+import { Attempt } from '../domain/Attempt';
+import { Stage } from '../domain/Stage';
+import { SubmissionValidator } from '../domain/SubmissionValidator';
+import { AttemptStatus, StageStatus, StageType } from '../domain/types';
+import { StatusMachine } from '../domain/StatusMachine';
 
 const router = Router();
 
@@ -230,23 +235,64 @@ router.post('/:id/submit', async (req: Request, res: Response) => {
       return;
     }
 
-    // 2. Basic content check — each stage must have >50 non-whitespace chars
-    const MIN_CHARS = 50;
-    const thin = raw.stages.filter(
-      (s) => !s.content || s.content.replace(/\/\/.*$/gm, '').trim().length < MIN_CHARS
-    );
-    if (thin.length > 0) {
+    // 2. Construct Domain Objects
+    const domainStages = raw.stages.map((s) => new Stage(s as any));
+    const attempt = new Attempt(raw as any, domainStages);
+
+    // 3. Deduplication Check - Get the previous hash from the most recent COMPLETED attempt
+    const lastAttempt = await prisma.attempt.findFirst({
+      where: {
+        learnerId: session.user.id,
+        problemId: raw.problem.id,
+        status: AttemptStatus.COMPLETED,
+        id: { not: id } // Exclude current attempt
+      },
+      orderBy: { createdAt: 'desc' },
+      include: { stages: true }
+    });
+
+    let previousHash: string | undefined = undefined;
+    if (lastAttempt) {
+      const lastDomainStages = lastAttempt.stages.map((s) => new Stage(s as any));
+      const lastDomainAttempt = new Attempt(lastAttempt as any, lastDomainStages);
+      previousHash = lastDomainAttempt.computeSubmissionHash();
+    }
+
+    // 4. Validate using the domain model
+    const validationResult = SubmissionValidator.validate(attempt, previousHash);
+    if (!validationResult.isValid) {
       res.status(422).json({
-        error: 'Each section must have at least 50 characters of real content.',
-        stages: thin.map((s) => s.stageType),
+        error: validationResult.errors[0], // Send first error as general error
+        errors: validationResult.errors
       });
       return;
     }
 
-    // 3. Mark as EVALUATING
-    await prisma.attempt.update({ where: { id }, data: { status: 'EVALUATING' } });
+    // 5. Transition state to EVALUATING
+    const evaluatingStages = domainStages.map((s) => {
+      let st = s;
+      if (st.status === StageStatus.DRAFT) {
+        st = st.transitionTo(StageStatus.SUBMITTED);
+        st = st.transitionTo(StageStatus.EVALUATING);
+      } else if (st.status === StageStatus.FAILED) {
+        st = st.transitionTo(StageStatus.EVALUATING);
+      }
+      return st;
+    });
 
-    // 4. Call LLM evaluator
+    const evaluatingAttempt = new Attempt(attempt.toRecord(), evaluatingStages);
+
+    await prisma.$transaction([
+      prisma.attempt.update({ where: { id }, data: { status: evaluatingAttempt.getOverallStatus() } }),
+      ...evaluatingStages.map((s) =>
+        prisma.stage.update({
+          where: { id: s.id },
+          data: s.toRecord()
+        })
+      )
+    ]);
+
+    // 6. Call LLM evaluator
     const { LLMEvaluator } = await import('../domain/LLMEvaluator');
     const evaluator = new LLMEvaluator(process.env.GROQ_API_KEY!);
 
@@ -258,34 +304,55 @@ router.post('/:id/submit', async (req: Request, res: Response) => {
       constraints: raw.problem.constraints as string[],
     };
 
-    const stages = raw.stages.map((s) => ({
-      stageType: s.stageType as any,
-      content: s.content,
-      status: s.status as any,
-    }));
+    const results = await evaluator.evaluate(evaluatingStages, problem);
 
-    const results = await evaluator.evaluate(stages as any, problem);
-
-    // 5. Persist evaluation (upsert in case of retry)
+    // 7. Persist evaluation (upsert in case of retry)
     const evaluation = await prisma.evaluation.upsert({
       where: { attemptId: id },
       create: { attemptId: id, results: results as any },
       update: { results: results as any },
     });
 
-    // 6. Mark attempt COMPLETED and all stages COMPLETED
+    // 8. Transition to COMPLETED
+    const completedStages = evaluatingStages.map((s) => s.transitionTo(StageStatus.COMPLETED));
+    const finalAttempt = new Attempt(evaluatingAttempt.toRecord(), completedStages);
+
     await prisma.$transaction([
-      prisma.attempt.update({ where: { id }, data: { status: 'COMPLETED' } }),
-      ...raw.stages.map((s) =>
-        prisma.stage.update({ where: { id: s.id }, data: { status: 'COMPLETED', submittedAt: new Date() } })
+      prisma.attempt.update({ where: { id }, data: { status: finalAttempt.getOverallStatus() } }),
+      ...completedStages.map((s) =>
+        prisma.stage.update({
+          where: { id: s.id },
+          data: s.toRecord()
+        })
       ),
     ]);
 
     res.json({ evaluation });
   } catch (err: any) {
     console.error(`[POST /api/attempts/${id}/submit]`, err);
-    // Mark as FAILED if evaluation errored
-    await prisma.attempt.update({ where: { id }, data: { status: 'FAILED' } }).catch(() => {});
+    // Mark as FAILED if evaluation errored, using Domain Layer if possible
+    try {
+      const current = await prisma.attempt.findUnique({ where: { id }, include: { stages: true } });
+      if (current && current.status === 'EVALUATING') {
+        const failedStages = current.stages.map((s) => {
+          let st = new Stage(s as any);
+          if (st.status === StageStatus.EVALUATING) {
+            st = st.transitionTo(StageStatus.FAILED);
+          }
+          return st;
+        });
+        const failedAttempt = new Attempt(current as any, failedStages);
+
+        await prisma.$transaction([
+          prisma.attempt.update({ where: { id }, data: { status: failedAttempt.getOverallStatus() } }),
+          ...failedStages.map((s) =>
+            prisma.stage.update({ where: { id: s.id }, data: s.toRecord() })
+          )
+        ]);
+      }
+    } catch (e) {
+      console.error('Failed to mark attempt as FAILED', e);
+    }
     res.status(500).json({ error: 'Evaluation failed. Please try again.', detail: err.message });
   }
 });

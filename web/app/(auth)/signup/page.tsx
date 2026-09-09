@@ -27,7 +27,7 @@ export default function SignupPage() {
       setError(error.message || "Failed to sign up");
       setIsLoading(false);
     } else {
-      router.push("/problems");
+      window.location.href = "/problems";
     }
   };
 

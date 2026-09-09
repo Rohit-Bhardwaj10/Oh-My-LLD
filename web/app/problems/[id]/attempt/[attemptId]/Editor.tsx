@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useTransition } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Save, CheckCircle, Loader2, Clock, ChevronRight, ChevronLeft } from 'lucide-react';
 import SimpleEditor from 'react-simple-code-editor';
@@ -8,6 +8,7 @@ import Prism from 'prismjs';
 import 'prismjs/components/prism-clike';
 import 'prismjs/components/prism-javascript';
 import 'prismjs/themes/prism-tomorrow.css'; // Dark theme for prism
+import { startAttempt } from '../../actions';
 
 const SERVER = 'http://localhost:4000';
 const AUTO_SAVE_INTERVAL = 30_000;
@@ -180,6 +181,8 @@ export function Editor({ attemptId, problemId, problem }: EditorProps) {
   const [evaluation, setEvaluation] = useState<any>(null);
   const [attemptStatus, setAttemptStatus] = useState<string>('DRAFT');
   const [sidebarWidth, setSidebarWidth] = useState(340); // Resizable sidebar width
+  const [isPending, startTransition] = useTransition();
+  const [resultTab, setResultTab] = useState<'evaluation' | 'submission'>('evaluation');
 
   const contentsRef = useRef(contents);
   contentsRef.current = contents;
@@ -355,26 +358,39 @@ export function Editor({ attemptId, problemId, problem }: EditorProps) {
               Saved {lastSaved.toLocaleTimeString()}
             </span>
           )}
-          <button
-            onClick={saveAll}
-            disabled={saveStatus === 'saving'}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded bg-[#2a2a2a] hover:bg-[#333] border border-white/5 text-sm font-medium text-white/90 transition-all disabled:opacity-50"
-          >
-            {saveStatus === 'saving' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
-             saveStatus === 'saved'  ? <CheckCircle className="w-3.5 h-3.5 text-emerald-500" /> :
-             <Save className="w-3.5 h-3.5" />}
-            {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved!' : 'Save Draft'}
-          </button>
-          <button
-            onClick={handlePrimaryAction}
-            disabled={submitting || attemptStatus !== 'DRAFT'}
-            className="px-3.5 py-1.5 rounded bg-[#ff6b35] hover:bg-[#e05a2a] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {submitting && !canGoNext ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-            {attemptStatus === 'DRAFT' 
-              ? (canGoNext ? 'Next (Cmd+Enter)' : 'Submit (Cmd+Enter)')
-              : 'Submitted'}
-          </button>
+          {attemptStatus === 'DRAFT' && (
+            <button
+              onClick={saveAll}
+              disabled={saveStatus === 'saving'}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded bg-[#2a2a2a] hover:bg-[#333] border border-white/5 text-sm font-medium text-white/90 transition-all disabled:opacity-50"
+            >
+              {saveStatus === 'saving' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
+               saveStatus === 'saved'  ? <CheckCircle className="w-3.5 h-3.5 text-emerald-500" /> :
+               <Save className="w-3.5 h-3.5" />}
+              {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved!' : 'Save Draft'}
+            </button>
+          )}
+          {attemptStatus === 'COMPLETED' ? (
+            <button
+              onClick={() => startTransition(() => startAttempt(problemId))}
+              disabled={isPending}
+              className="px-3.5 py-1.5 rounded bg-[#ff6b35] hover:bg-[#e05a2a] text-white text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              {isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              Re-attempt
+            </button>
+          ) : (
+            <button
+              onClick={handlePrimaryAction}
+              disabled={submitting || attemptStatus !== 'DRAFT'}
+              className="px-3.5 py-1.5 rounded bg-[#ff6b35] hover:bg-[#e05a2a] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {submitting && !canGoNext ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+              {attemptStatus === 'DRAFT' 
+                ? (canGoNext ? 'Next (Cmd+Enter)' : 'Submit (Cmd+Enter)')
+                : 'Submitted'}
+            </button>
+          )}
         </div>
       </header>
 
@@ -463,7 +479,24 @@ export function Editor({ attemptId, problemId, problem }: EditorProps) {
 
         {/* RIGHT — Editor or Evaluation */}
         <div className="flex-1 flex flex-col overflow-hidden bg-[#0a0a0a]">
-          {evaluation ? (
+          {evaluation && (
+            <div className="flex items-center gap-8 border-b border-white/10 px-8 pt-6 shrink-0 bg-[#0a0a0a]">
+              <button 
+                onClick={() => setResultTab('evaluation')}
+                className={`pb-3 text-sm font-medium border-b-2 transition-colors ${resultTab === 'evaluation' ? 'border-[#ff6b35] text-white' : 'border-transparent text-white/40 hover:text-white/70'}`}
+              >
+                Evaluation Results
+              </button>
+              <button 
+                onClick={() => setResultTab('submission')}
+                className={`pb-3 text-sm font-medium border-b-2 transition-colors ${resultTab === 'submission' ? 'border-[#ff6b35] text-white' : 'border-transparent text-white/40 hover:text-white/70'}`}
+              >
+                My Submission
+              </button>
+            </div>
+          )}
+
+          {evaluation && resultTab === 'evaluation' ? (
             // Evaluation Results View
             <div className="flex-1 overflow-y-auto p-8">
               <div className="max-w-3xl mx-auto space-y-8">

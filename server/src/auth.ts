@@ -10,6 +10,7 @@ const adapter = new PrismaPg(pool);
 export const prisma = new PrismaClient({ adapter });
 
 export const auth = betterAuth({
+  logger: { level: "debug" },
   database: prismaAdapter(prisma, {
     provider: "postgresql", 
   }),

@@ -25,7 +25,7 @@ export default function LoginPage() {
       setError(error.message || "Invalid credentials");
       setIsLoading(false);
     } else {
-      router.push("/problems");
+      window.location.href = "/problems";
     }
   };
 

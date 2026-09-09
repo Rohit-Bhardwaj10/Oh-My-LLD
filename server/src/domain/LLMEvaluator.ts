@@ -31,8 +31,9 @@ export class LLMEvaluator implements Evaluator {
           content: prompt,
         },
       ],
-      model: 'llama3-70b-8192', // or appropriate Groq model
+      model: 'openai/gpt-oss-120b',
       response_format: { type: 'json_object' },
+      temperature: 0.1,
     });
 
     const responseContent = completion.choices[0]?.message?.content;

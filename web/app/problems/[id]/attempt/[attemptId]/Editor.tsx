@@ -18,6 +18,7 @@ interface Attempt {
   problemId: string;
   status: string;
   stages: Stage[];
+  evaluation?: any;
 }
 
 interface Problem {
@@ -170,6 +171,9 @@ export function Editor({ attemptId, problemId, problem }: EditorProps) {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [evaluation, setEvaluation] = useState<any>(null);
+  const [attemptStatus, setAttemptStatus] = useState<string>('DRAFT');
   const [sidebarWidth, setSidebarWidth] = useState(340); // Resizable sidebar width
 
   const contentsRef = useRef(contents);
@@ -187,6 +191,10 @@ export function Editor({ attemptId, problemId, problem }: EditorProps) {
           DESIGN: map['DESIGN'] || STAGE_META['DESIGN'].placeholder,
           EXTENSION: map['EXTENSION'] || STAGE_META['EXTENSION'].placeholder,
         });
+        setAttemptStatus(data.attempt.status);
+        if (data.attempt.evaluation) {
+          setEvaluation(data.attempt.evaluation.results);
+        }
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -236,10 +244,37 @@ export function Editor({ attemptId, problemId, problem }: EditorProps) {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!loading) saveAll();
+      if (!loading && attemptStatus === 'DRAFT') saveAll();
     }, AUTO_SAVE_INTERVAL);
     return () => clearInterval(interval);
-  }, [loading, saveAll]);
+  }, [loading, saveAll, attemptStatus]);
+
+  const handleSubmit = async () => {
+    if (!confirm('Are you sure you want to submit? You cannot edit this attempt after submitting.')) return;
+    
+    // Auto-save first
+    await saveAll();
+    
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${SERVER}/api/attempts/${attemptId}/submit`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      
+      if (!res.ok) {
+        alert(data.error || 'Failed to submit evaluation');
+      } else {
+        setEvaluation(data.evaluation.results);
+        setAttemptStatus('COMPLETED');
+      }
+    } catch (err) {
+      alert('An unexpected error occurred during submission.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const activeIndex = STAGES.indexOf(activeStage);
   const canGoBack = activeIndex > 0;
@@ -288,10 +323,12 @@ export function Editor({ attemptId, problemId, problem }: EditorProps) {
             {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved!' : 'Save Draft'}
           </button>
           <button
-            disabled
-            className="px-3.5 py-1.5 rounded-lg bg-violet-600/30 text-violet-400 text-sm font-semibold opacity-50 cursor-not-allowed"
+            onClick={handleSubmit}
+            disabled={submitting || attemptStatus !== 'DRAFT'}
+            className="px-3.5 py-1.5 rounded-lg bg-violet-600 text-white hover:bg-violet-500 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            Submit
+            {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+            {attemptStatus === 'DRAFT' ? 'Submit for Evaluation' : 'Submitted'}
           </button>
         </div>
       </header>
@@ -379,27 +416,72 @@ export function Editor({ attemptId, problemId, problem }: EditorProps) {
           }}
         />
 
-        {/* RIGHT — Editor */}
+        {/* RIGHT — Editor or Evaluation */}
         <div className="flex-1 flex flex-col overflow-hidden bg-[#0d0f17]">
-          {/* Editor header */}
-          <div className="flex items-center justify-between px-6 py-2.5 border-b border-white/8 shrink-0">
-            <span className="text-xs font-mono text-slate-500 uppercase tracking-wider">
-              {STAGE_META[activeStage].label}
-            </span>
-            <span className="text-xs text-slate-600 tabular-nums">
-              {wordCount} {wordCount === 1 ? 'word' : 'words'}
-            </span>
-          </div>
-
-          {/* Textarea */}
-          <textarea
-            key={activeStage}
-            value={contents[activeStage]}
-            onChange={(e) => setContents((prev) => ({ ...prev, [activeStage]: e.target.value }))}
-            placeholder={STAGE_META[activeStage].placeholder}
-            className="flex-1 w-full bg-transparent text-slate-200 placeholder-slate-700 text-sm font-mono leading-7 resize-none outline-none px-8 py-6 caret-violet-400"
-            spellCheck={false}
-          />
+          {evaluation ? (
+            // Evaluation Results View
+            <div className="flex-1 overflow-y-auto p-8">
+              <div className="max-w-3xl mx-auto space-y-8">
+                <div className="flex items-center justify-between pb-6 border-b border-white/8">
+                  <h2 className="text-xl font-bold text-slate-200">Evaluation Results</h2>
+                  <div className="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-xs font-medium uppercase tracking-wider">
+                    Completed
+                  </div>
+                </div>
+                
+                {evaluation.map((res: any, i: number) => (
+                  <div key={i} className="space-y-4">
+                    <h3 className="text-sm font-bold text-violet-400 uppercase tracking-widest">{res.stageType}</h3>
+                    <div className="grid gap-4">
+                      {res.feedback.map((item: any, j: number) => (
+                        <div key={j} className="p-4 rounded-xl glass border border-white/8 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-slate-300">{item.criterion}</span>
+                            <span className={`px-2 py-0.5 rounded text-xs font-bold ${item.score >= 4 ? 'bg-emerald-500/20 text-emerald-300' : item.score === 3 ? 'bg-amber-500/20 text-amber-300' : 'bg-red-500/20 text-red-300'}`}>
+                              {item.score}/5
+                            </span>
+                          </div>
+                          {item.evidence && (
+                            <div className="pl-3 border-l-2 border-white/10 text-sm text-slate-400 font-mono">
+                              "{item.evidence}"
+                            </div>
+                          )}
+                          <p className="text-sm text-slate-300">{item.concern}</p>
+                          {item.suggestion && (
+                            <p className="text-sm text-emerald-400/90 flex gap-2">
+                              <span className="shrink-0">💡</span> {item.suggestion}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            // Editor View
+            <>
+              <div className="flex items-center justify-between px-6 py-2.5 border-b border-white/8 shrink-0">
+                <span className="text-xs font-mono text-slate-500 uppercase tracking-wider">
+                  {STAGE_META[activeStage].label}
+                </span>
+                <span className="text-xs text-slate-600 tabular-nums">
+                  {wordCount} {wordCount === 1 ? 'word' : 'words'}
+                </span>
+              </div>
+    
+              <textarea
+                key={activeStage}
+                value={contents[activeStage]}
+                onChange={(e) => setContents((prev) => ({ ...prev, [activeStage]: e.target.value }))}
+                placeholder={STAGE_META[activeStage].placeholder}
+                className="flex-1 w-full bg-transparent text-slate-200 placeholder-slate-700 text-sm font-mono leading-7 resize-none outline-none px-8 py-6 caret-violet-400"
+                spellCheck={false}
+                disabled={attemptStatus !== 'DRAFT'}
+              />
+            </>
+          )}
         </div>
       </div>
     </div>

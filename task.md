@@ -1,34 +1,19 @@
-- `[x]` Update `server/prisma/schema.prisma` with domain models (User, Problem, Attempt, Stage, Evaluation)
-- `[x]` Run `npx prisma db push` and `npx prisma generate` in `server`
-- `[x]` Create `server/prisma/seed.ts` and run it to seed Problems
-- `[x]` Install backend dependencies (`express`, `cors`, `better-auth`, etc.)
-- `[x]` Set up `server/src/auth.ts` and `server/src/index.ts`
-- `[x]` Install `better-auth` client in `web`
-- `[x]` Create `web/lib/auth-client.ts`
-- `[x]` Create `web/middleware.ts` to protect `/problems` and `/attempts`
-- `[x]` Create `web/app/(auth)/login/page.tsx` and `web/app/(auth)/signup/page.tsx`
-- `[x]` Add global styles in `web/app/globals.css`
-- `[x]` Create stub page at `web/app/problems/page.tsx`
-- `[x]` Test full flow (Signup -> Redirect to /problems -> Ensure db reflects the new user)
+# Frontend Redesign (V2)
 
-### SLICE 2: Domain Layer
-- `[x]` Install `groq-sdk` and `vitest` in `server/`
-- `[x]` Setup `vitest.config.ts`
-- `[x]` Create `types.ts`, `Evaluator.ts`, `StatusMachine.ts`, `Stage.ts`, `Attempt.ts`, `SubmissionValidator.ts`
-- `[x]` Create `StubEvaluator.ts` and `LLMEvaluator.ts`
-- `[x]` Write unit tests for `StatusMachine`, `Stage`, `SubmissionValidator`, and `StubEvaluator`
-- `[x]` Verify all tests pass
+## Global Styles
+- `[x]` Update `globals.css` (remove dark theme/glass, add light theme)
+- `[x]` Update `app/layout.tsx` (background and text color classes)
+- `[x]` Update `prismjs` theme to a light theme in `Editor.tsx`
 
-### SLICE 3: Problems API + Problem List UI
-- `[x]` Create `server/src/routes/problems.ts` (GET /api/problems, GET /api/problems/:id)
-- `[x]` Register problems router in `server/src/index.ts`
-- `[x]` Rewrite `web/app/problems/page.tsx` with glassmorphism cards
-- `[x]` Create `web/app/problems/[id]/page.tsx` with Problem/History tabs
-- `[x]` Install `lucide-react` in `web/`
+## Pages
+- `[x]` Redesign `app/page.tsx` (restrained, text-based practice loop)
+- `[x]` Redesign `app/problems/page.tsx` (dense reference table)
 
-### SLICE 4: Attempt Creation + Editor
-- `[x]` Create `server/src/routes/attempts.ts` (POST, GET, PUT endpoints)
-- `[x]` Register attempts router in `server/src/index.ts`
-- `[x]` Create `web/app/problems/[id]/actions.ts` (Server Action to start attempt)
-- `[x]` Wire up "Start Attempt" button in `ProblemDetailClient.tsx`
-- `[x]` Create `web/app/problems/[id]/attempt/[attemptId]/page.tsx` (Editor)
+## Problem Detail & Editor
+- `[x]` Refactor `app/problems/[id]/ProblemDetailClient.tsx` (remove tabs, create dense layout)
+- `[x]` Refactor `app/problems/[id]/attempt/[attemptId]/Editor.tsx` (continuous vertical scroll for all stages)
+- `[x]` Refactor Feedback View in `Editor.tsx` (lint-report style, structured blocks)
+
+## Final Polish
+- `[x]` Ensure status states (Draft, Completed, Evaluating) are quiet indicators (e.g. text/dot colors)
+- `[x]` Verify responsiveness and clean typography hierarchy

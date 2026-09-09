@@ -2,8 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Clock, BookOpen, History, Loader2, CheckCircle2, FileEdit } from 'lucide-react';
-import { TabBar } from './TabBar';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { startAttempt } from './actions';
 
 interface Problem {
@@ -20,189 +19,147 @@ interface ProblemDetailClientProps {
 }
 
 export function ProblemDetailClient({ problem, initialAttempts }: ProblemDetailClientProps) {
-  const [activeTab, setActiveTab] = useState<'problem' | 'history'>('problem');
   const [isPending, startTransition] = useTransition();
   const [attempts, setAttempts] = useState<any[]>(initialAttempts);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
 
   useEffect(() => {
-    if (activeTab === 'history') {
-      fetch(`http://localhost:4000/api/attempts?problemId=${problem.id}`, {
-        credentials: 'include',
+    fetch(`http://localhost:4000/api/attempts?problemId=${problem.id}`, {
+      credentials: 'include',
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.attempts) {
+          setAttempts(data.attempts);
+        }
       })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.attempts) {
-            setAttempts(data.attempts);
-          }
-        })
-        .catch(console.error);
-    }
-  }, [activeTab, problem.id]);
+      .catch(console.error)
+      .finally(() => setIsLoadingHistory(false));
+  }, [problem.id]);
+
+  const completedAttempts = attempts.filter((a) => a.status === 'COMPLETED');
 
   return (
-    <main className="min-h-screen px-6 py-12 max-w-4xl mx-auto">
-      {/* Back nav */}
-      <Link
-        href="/problems"
-        className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-200 text-sm mb-10 transition-colors group"
-      >
-        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-        All Problems
-      </Link>
+    <div className="flex flex-col min-h-screen bg-zinc-50 font-sans text-zinc-900">
+      <header className="px-8 py-4 border-b border-zinc-200 bg-white flex items-center justify-between">
+        <Link
+          href="/problems"
+          className="inline-flex items-center gap-2 text-zinc-500 hover:text-zinc-900 text-sm transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Problems
+        </Link>
+      </header>
 
-      {/* Problem header */}
-      <div className="mb-10">
-        <h1 className="text-4xl font-bold tracking-tight text-white mb-3">
-          {problem.title}
-        </h1>
-        <p className="text-slate-400 text-base leading-relaxed max-w-2xl">
-          {problem.description}
-        </p>
-      </div>
-
-      {/* Tabs */}
-      <TabBar active={activeTab} onChange={setActiveTab} />
-
-      {/* Problem Tab */}
-      {activeTab === 'problem' && (
+      <main className="flex-1 w-full max-w-5xl mx-auto py-8 px-8 grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-12">
+        {/* Left Column: Problem Spec */}
         <div className="space-y-8">
-          {/* Requirements */}
-          {problem.requirements?.length > 0 && (
-            <section>
-              <div className="flex items-center gap-2 mb-4">
-                <BookOpen className="w-4 h-4 text-violet-400" />
-                <h2 className="text-sm font-semibold text-violet-300 uppercase tracking-wider">
-                  Requirements
-                </h2>
-              </div>
-              <div className="glass rounded-2xl p-6 space-y-3">
-                {problem.requirements.map((req, i) => (
-                  <div key={i} className="flex gap-3">
-                    <span className="mt-1 w-5 h-5 rounded-full bg-violet-500/20 flex items-center justify-center text-violet-400 text-xs font-bold shrink-0">
-                      {i + 1}
-                    </span>
-                    <p className="text-slate-300 text-sm leading-relaxed">{req}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 mb-2">
+              {problem.title}
+            </h1>
+            <p className="text-sm text-zinc-700 leading-relaxed max-w-2xl">
+              {problem.description}
+            </p>
+          </div>
 
-          {/* Constraints */}
-          {problem.constraints?.length > 0 && (
-            <section>
-              <div className="flex items-center gap-2 mb-4">
-                <Clock className="w-4 h-4 text-blue-400" />
-                <h2 className="text-sm font-semibold text-blue-300 uppercase tracking-wider">
+          <div className="space-y-6">
+            {problem.requirements?.length > 0 && (
+              <section>
+                <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3 font-mono">
+                  Functional Requirements
+                </h2>
+                <ul className="list-decimal list-inside space-y-1.5 text-sm text-zinc-800 marker:text-zinc-400">
+                  {problem.requirements.map((req, i) => (
+                    <li key={i} className="leading-relaxed">
+                      {req}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {problem.constraints?.length > 0 && (
+              <section>
+                <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3 font-mono">
                   Constraints & Notes
                 </h2>
-              </div>
-              <div className="glass rounded-2xl p-6 space-y-3">
-                {problem.constraints.map((c, i) => (
-                  <div key={i} className="flex gap-3">
-                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                    <p className="text-slate-400 text-sm leading-relaxed">{c}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
+                <ul className="list-disc list-inside space-y-1.5 text-sm text-zinc-800 marker:text-zinc-400">
+                  {problem.constraints.map((c, i) => (
+                    <li key={i} className="leading-relaxed">
+                      {c}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </div>
 
-          {/* Start CTA */}
           <div className="pt-4">
             <button
               onClick={() => startTransition(() => startAttempt(problem.id))}
               disabled={isPending}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center h-10 px-6 rounded bg-amber-600 hover:bg-amber-700 text-white font-medium text-sm transition-colors disabled:opacity-60"
             >
               {isPending ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Starting…
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Starting...
                 </>
               ) : (
-                'Start Attempt →'
+                'Start Attempt'
               )}
             </button>
           </div>
         </div>
-      )}
 
-      {/* History Tab */}
-      {activeTab === 'history' && (
-        <div className="space-y-4">
-          {attempts.filter(a => a.status === 'COMPLETED').length === 0 ? (
-            <div className="glass border border-slate-800/50 rounded-2xl p-12 flex flex-col items-center justify-center text-center gap-4">
-              <div className="p-4 rounded-2xl bg-slate-800/30">
-                <History className="w-8 h-8 text-slate-500" />
-              </div>
-              <p className="text-slate-300 font-medium text-lg">No completed attempts yet</p>
-              <p className="text-slate-500 text-sm max-w-sm leading-relaxed">
-                Your completed submission history for this problem will appear here.
-              </p>
+        {/* Right Column: History */}
+        <div className="border-t lg:border-t-0 lg:border-l border-zinc-200 pt-8 lg:pt-0 lg:pl-12">
+          <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-4 font-mono">
+            Past Attempts
+          </h2>
+          
+          {isLoadingHistory ? (
+            <div className="text-sm text-zinc-500">Loading history...</div>
+          ) : completedAttempts.length === 0 ? (
+            <div className="text-sm text-zinc-500 italic">
+              No completed attempts yet.
             </div>
           ) : (
-            <div className="grid gap-4">
-              {attempts.filter(a => a.status === 'COMPLETED').map((attempt) => {
+            <ul className="space-y-4">
+              {completedAttempts.map((attempt) => {
                 const date = new Date(attempt.createdAt);
-                const isCompleted = attempt.status === 'COMPLETED';
-                const isDraft = attempt.status === 'DRAFT';
-
                 return (
-                  <Link
-                    key={attempt.id}
-                    href={`/problems/${problem.id}/attempt/${attempt.id}`}
-                    className="glass border border-slate-800/60 p-5 sm:p-6 rounded-2xl hover:border-slate-700 hover:bg-slate-800/40 transition-all duration-300 group flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                  >
-                    <div className="flex items-start sm:items-center gap-4 sm:gap-5">
-                      <div className={`p-3 rounded-xl shrink-0 ${
-                        isCompleted ? 'bg-emerald-500/10 text-emerald-400' :
-                        isDraft ? 'bg-slate-500/10 text-slate-400' :
-                        'bg-blue-500/10 text-blue-400'
-                      }`}>
-                        {isCompleted ? <CheckCircle2 className="w-5 h-5" /> :
-                         isDraft ? <FileEdit className="w-5 h-5" /> :
-                         <Loader2 className="w-5 h-5 animate-spin" />}
-                      </div>
-                      
-                      <div>
-                        <div className="flex items-center gap-3 mb-1.5">
-                          <span className="text-slate-200 font-semibold text-base group-hover:text-white transition-colors">
-                            {date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                          </span>
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${
-                            isCompleted ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/20' :
-                            isDraft ? 'bg-slate-500/20 text-slate-400 border border-slate-500/20' :
-                            'bg-blue-500/20 text-blue-400 border border-blue-500/20'
-                          }`}>
-                            {attempt.status}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-slate-500">
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>{date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {attempt.totalScore !== null && (
-                      <div className="flex flex-col sm:items-end justify-center pl-[52px] sm:pl-0">
-                        <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1 flex items-center gap-1.5">
-                          Total Score
+                  <li key={attempt.id} className="text-sm group">
+                    <Link
+                      href={`/problems/${problem.id}/attempt/${attempt.id}`}
+                      className="block"
+                    >
+                      <div className="flex items-baseline justify-between mb-1">
+                        <span className="font-medium text-zinc-900 group-hover:text-amber-600 transition-colors">
+                          {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </span>
-                        <div className="flex items-baseline gap-0.5">
-                          <span className="text-2xl font-bold text-violet-400 tracking-tight">{attempt.totalScore}</span>
-                          <span className="text-slate-600 font-semibold text-sm">/15</span>
-                        </div>
+                        {attempt.totalScore !== null && (
+                          <span className="font-mono text-zinc-600">
+                            {attempt.totalScore}/15
+                          </span>
+                        )}
                       </div>
-                    )}
-                  </Link>
+                      <div className="text-xs text-zinc-500 flex items-center gap-2">
+                        <span>{date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+                        <span className="w-1 h-1 rounded-full bg-zinc-300" />
+                        <span className="text-amber-600 font-medium tracking-wide text-[10px] uppercase">
+                          Completed
+                        </span>
+                      </div>
+                    </Link>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           )}
         </div>
-      )}
-    </main>
+      </main>
+    </div>
   );
 }

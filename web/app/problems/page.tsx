@@ -1,10 +1,13 @@
 import Link from 'next/link';
+import { FileText } from 'lucide-react';
+import { Navbar } from '@/components/Navbar';
 
 interface Problem {
   id: string;
   title: string;
   description: string;
-  constraints: string[];
+  requirements?: string[];
+  constraints?: string[];
 }
 
 async function getProblems(): Promise<Problem[]> {
@@ -24,63 +27,71 @@ export default async function ProblemsPage() {
   const problems = await getProblems();
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 font-sans text-zinc-900">
-      <header className="px-8 py-6 border-b border-zinc-200 bg-white">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <Link href="/" className="font-semibold text-zinc-900 tracking-tight hover:text-amber-600 transition-colors">
-            LLD Practice Platform
-          </Link>
-          <nav className="flex items-center gap-6 text-sm font-medium">
-            <span className="text-zinc-900">Problems</span>
-          </nav>
-        </div>
-      </header>
+    <div className="flex flex-col min-h-screen bg-[#0a0a0a] font-sans text-white selection:bg-white/20">
 
-      <main className="flex-1 w-full max-w-5xl mx-auto py-12 px-8">
-        <div className="mb-10">
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 mb-2">
-            Design Problems
-          </h1>
-          <p className="text-sm text-zinc-500">
-            Select a problem to begin your design attempt.
-          </p>
+      <Navbar />
+
+      {/* Main Content */}
+      <main className="relative z-10 flex-1 w-full max-w-5xl mx-auto pt-16 pb-12 px-8">
+        <div className="mb-10 flex items-end justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight font-mono uppercase text-white mb-2">
+              Design Problems
+            </h1>
+            <p className="text-white/60">
+              Select a canonical system to begin your design attempt.
+            </p>
+          </div>
         </div>
 
         {problems.length === 0 ? (
-          <div className="border border-zinc-200 bg-white rounded p-8 text-center text-sm text-zinc-500">
-            No problems found. Ensure the server is running.
+          <div className="border border-white/10 bg-[#0a0a0a] rounded-xl p-12 text-center">
+            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4 border border-white/10">
+              <FileText className="w-5 h-5 text-white/40" />
+            </div>
+            <h3 className="text-sm font-medium text-white/90">No problems found</h3>
+            <p className="text-sm text-white/50 mt-1">Ensure the backend server is running and populated.</p>
           </div>
         ) : (
-          <div className="border border-zinc-200 bg-white rounded overflow-hidden shadow-sm">
+          <div className="bg-[#0a0a0a] border border-white/10 rounded-xl overflow-hidden">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-zinc-100 border-b border-zinc-200 text-xs text-zinc-500 uppercase tracking-wider font-mono">
-                  <th className="px-6 py-3 font-medium">#</th>
-                  <th className="px-6 py-3 font-medium">Title</th>
-                  <th className="px-6 py-3 font-medium hidden sm:table-cell">Description</th>
-                  <th className="px-6 py-3 font-medium text-right">Action</th>
+                <tr className="border-b border-white/10 bg-white/5">
+                  <th className="py-4 px-6 text-xs font-bold text-white/50 uppercase tracking-widest w-[50%]">Title</th>
+                  <th className="py-4 px-6 text-xs font-bold text-white/50 uppercase tracking-widest">Complexity</th>
+                  <th className="py-4 px-6 text-xs font-bold text-white/50 uppercase tracking-widest text-right">Status</th>
                 </tr>
               </thead>
-              <tbody className="text-sm divide-y divide-zinc-200">
+              <tbody className="divide-y divide-white/10">
                 {problems.map((problem, idx) => (
-                  <tr key={problem.id} className="hover:bg-zinc-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-zinc-500 font-mono">
-                      {String(idx + 1).padStart(3, '0')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap font-medium text-zinc-900">
-                      <Link href={`/problems/${problem.id}`} className="hover:text-amber-600 transition-colors">
-                        {problem.title}
+                  <tr
+                    key={problem.id}
+                    className={`group hover:bg-[#1a1a1a] transition-colors ${idx % 2 !== 0 ? 'bg-white/[0.02]' : 'bg-transparent'}`}
+                  >
+                    <td className="py-5 px-6">
+                      <Link href={`/problems/${problem.id}`} className="block">
+                        <div className="font-semibold text-base text-white/90 group-hover:text-[#ff6b35] transition-colors">
+                          {problem.title}
+                        </div>
+                        <div className="text-sm text-white/50 mt-1 line-clamp-1 max-w-lg">
+                          {problem.description}
+                        </div>
                       </Link>
                     </td>
-                    <td className="px-6 py-4 text-zinc-500 hidden sm:table-cell">
-                      <div className="truncate max-w-md" title={problem.description}>
-                        {problem.description}
+                    <td className="py-5 px-6 align-middle">
+                      <div className="flex gap-2">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-white/5 text-white/60 border border-white/10">
+                          {problem.requirements?.length || 0} reqs
+                        </span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-white/5 text-white/60 border border-white/10">
+                          {problem.constraints?.length || 0} constraints
+                        </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                    <td className="py-5 px-6 text-right align-middle">
                       <Link
                         href={`/problems/${problem.id}`}
-                        className="text-amber-600 hover:text-amber-700 font-medium transition-colors"
+                        className="inline-flex items-center justify-center h-8 px-4 rounded-md bg-[#2a2a2a] hover:bg-[#333] border border-white/5 text-white/90 font-semibold text-xs transition-colors"
                       >
                         Solve
                       </Link>

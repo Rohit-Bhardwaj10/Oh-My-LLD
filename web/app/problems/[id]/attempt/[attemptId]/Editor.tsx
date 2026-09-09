@@ -7,7 +7,7 @@ import SimpleEditor from 'react-simple-code-editor';
 import Prism from 'prismjs';
 import 'prismjs/components/prism-clike';
 import 'prismjs/components/prism-javascript';
-import 'prismjs/themes/prism.css'; // Using the light theme for prism
+import 'prismjs/themes/prism-tomorrow.css'; // Dark theme for prism
 
 const SERVER = 'http://localhost:4000';
 const AUTO_SAVE_INTERVAL = 30_000;
@@ -286,6 +286,14 @@ export function Editor({ attemptId, problemId, problem }: EditorProps) {
   const canGoNext = activeIndex < STAGES.length - 1;
   const wordCount = contents[activeStage].trim().split(/\s+/).filter(Boolean).length;
 
+  const handlePrimaryAction = () => {
+    if (canGoNext) {
+      setActiveStage(STAGES[activeIndex + 1]);
+    } else {
+      handleSubmit();
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Cmd/Ctrl + S to Save Draft
@@ -296,49 +304,53 @@ export function Editor({ attemptId, problemId, problem }: EditorProps) {
         }
       }
       
-      // Cmd/Ctrl + Enter to Submit
+      // Cmd/Ctrl + Enter to Submit or Next
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         e.preventDefault();
         if (attemptStatus === 'DRAFT' && !submitting) {
-          handleSubmit();
+          if (activeIndex < STAGES.length - 1) {
+            setActiveStage(STAGES[activeIndex + 1]);
+          } else {
+            handleSubmit();
+          }
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [attemptStatus, submitting, saveAll]);
+  }, [attemptStatus, submitting, saveAll, activeIndex]);
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-zinc-50">
-        <Loader2 className="w-8 h-8 animate-spin text-zinc-400" />
+      <div className="h-screen flex items-center justify-center bg-[#0a0a0a]">
+        <Loader2 className="w-8 h-8 animate-spin text-white/40" />
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-zinc-50 text-zinc-900 font-sans">
+    <div className="h-screen flex flex-col overflow-hidden bg-[#0a0a0a] text-white font-sans selection:bg-white/20">
       {/* Top bar */}
-      <header className="flex items-center justify-between px-5 py-3 border-b border-zinc-200 bg-white shrink-0">
+      <header className="flex items-center justify-between px-5 py-3 border-b border-white/10 bg-[#0a0a0a] shrink-0">
         <div className="flex items-center gap-3">
           <Link
             href={`/problems/${problemId}`}
-            className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-900 text-sm font-medium transition-colors group"
+            className="flex items-center gap-1.5 text-white/50 hover:text-white text-sm font-medium transition-colors group"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
             Back
           </Link>
-          <span className="text-zinc-300">/</span>
-          <span className="text-zinc-900 text-sm font-semibold">{problem.title}</span>
-          <span className="ml-2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-sm bg-zinc-100 text-zinc-600 border border-zinc-200">
+          <span className="text-white/30">/</span>
+          <span className="text-white text-sm font-semibold">{problem.title}</span>
+          <span className="ml-2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-sm bg-white/10 text-white/80 border border-white/10">
             {attemptStatus}
           </span>
         </div>
 
         <div className="flex items-center gap-3">
           {lastSaved && (
-            <span className="flex items-center gap-1 text-xs text-zinc-500 font-mono">
+            <span className="flex items-center gap-1 text-xs text-white/50 font-mono">
               <Clock className="w-3 h-3" />
               Saved {lastSaved.toLocaleTimeString()}
             </span>
@@ -346,20 +358,22 @@ export function Editor({ attemptId, problemId, problem }: EditorProps) {
           <button
             onClick={saveAll}
             disabled={saveStatus === 'saving'}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded bg-zinc-100 hover:bg-zinc-200 text-sm font-medium text-zinc-700 transition-all disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded bg-[#2a2a2a] hover:bg-[#333] border border-white/5 text-sm font-medium text-white/90 transition-all disabled:opacity-50"
           >
             {saveStatus === 'saving' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
-             saveStatus === 'saved'  ? <CheckCircle className="w-3.5 h-3.5 text-emerald-600" /> :
+             saveStatus === 'saved'  ? <CheckCircle className="w-3.5 h-3.5 text-emerald-500" /> :
              <Save className="w-3.5 h-3.5" />}
             {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved!' : 'Save Draft'}
           </button>
           <button
-            onClick={handleSubmit}
+            onClick={handlePrimaryAction}
             disabled={submitting || attemptStatus !== 'DRAFT'}
-            className="px-3.5 py-1.5 rounded bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-3.5 py-1.5 rounded bg-[#ff6b35] hover:bg-[#e05a2a] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-            {attemptStatus === 'DRAFT' ? 'Submit (Cmd+Enter)' : 'Submitted'}
+            {submitting && !canGoNext ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+            {attemptStatus === 'DRAFT' 
+              ? (canGoNext ? 'Next (Cmd+Enter)' : 'Submit (Cmd+Enter)')
+              : 'Submitted'}
           </button>
         </div>
       </header>
@@ -368,14 +382,14 @@ export function Editor({ attemptId, problemId, problem }: EditorProps) {
       <div className="flex flex-1 overflow-hidden">
 
         {/* LEFT SIDEBAR — Problem context */}
-        <aside style={{ width: sidebarWidth }} className="shrink-0 flex flex-col overflow-hidden relative border-r border-zinc-200 bg-zinc-50">
+        <aside style={{ width: sidebarWidth }} className="shrink-0 flex flex-col overflow-hidden relative border-r border-white/10 bg-[#0a0a0a]">
           
           {/* Top minimal navigation */}
-          <div className="flex items-center justify-center gap-4 py-4 border-b border-zinc-200 shrink-0 bg-white">
+          <div className="flex items-center justify-center gap-4 py-4 border-b border-white/10 shrink-0 bg-white/5">
             <button
               onClick={() => canGoBack && setActiveStage(STAGES[activeIndex - 1])}
               disabled={!canGoBack}
-              className="text-zinc-400 hover:text-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="text-white/40 hover:text-white/80 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -387,7 +401,7 @@ export function Editor({ attemptId, problemId, problem }: EditorProps) {
                   onClick={() => setActiveStage(stage)}
                   title={STAGE_META[stage].label}
                   className={`w-2 h-2 rounded-full transition-all ${
-                    activeStage === stage ? 'bg-amber-500 ring-2 ring-amber-500/30 w-2.5 h-2.5' : 'bg-zinc-300 hover:bg-zinc-400'
+                    activeStage === stage ? 'bg-[#ff6b35] ring-2 ring-[#ff6b35]/30 w-2.5 h-2.5' : 'bg-white/30 hover:bg-white/50'
                   }`}
                 />
               ))}
@@ -396,7 +410,7 @@ export function Editor({ attemptId, problemId, problem }: EditorProps) {
             <button
               onClick={() => canGoNext && setActiveStage(STAGES[activeIndex + 1])}
               disabled={!canGoNext}
-              className="text-zinc-400 hover:text-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="text-white/40 hover:text-white/80 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -405,30 +419,30 @@ export function Editor({ attemptId, problemId, problem }: EditorProps) {
           {/* Stage instructions */}
           <div className="flex-1 overflow-y-auto p-6 space-y-8">
             <div className="text-left">
-              <span className="inline-flex px-2 py-0.5 bg-zinc-200/50 rounded-sm border border-zinc-200 text-[10px] font-bold uppercase tracking-widest text-zinc-600 mb-4 font-mono">
+              <span className="inline-flex px-2 py-0.5 bg-white/5 rounded-sm border border-white/10 text-[10px] font-bold uppercase tracking-widest text-white/60 mb-4 font-mono">
                 {STAGE_META[activeStage].label}
               </span>
-              <p className="text-zinc-800 text-sm leading-relaxed whitespace-pre-line font-medium">
+              <p className="text-white/90 text-sm leading-relaxed whitespace-pre-line font-medium">
                 {STAGE_META[activeStage].prompt}
               </p>
             </div>
 
-            <div className="border-t border-zinc-200 pt-6 text-left">
-              <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 font-mono">
+            <div className="border-t border-white/10 pt-6 text-left">
+              <h3 className="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-3 font-mono">
                 Problem Context
               </h3>
-              <p className="text-zinc-600 text-sm leading-relaxed">{problem.description}</p>
+              <p className="text-white/70 text-sm leading-relaxed">{problem.description}</p>
             </div>
 
             {problem.requirements?.length > 0 && (
               <div className="text-left">
-                <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 font-mono">
+                <h3 className="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-3 font-mono">
                   Requirements
                 </h3>
                 <ul className="space-y-3">
                   {problem.requirements.map((r, i) => (
-                    <li key={i} className="flex gap-3 text-sm text-zinc-600">
-                      <span className="text-amber-600 font-bold shrink-0">{i + 1}.</span>
+                    <li key={i} className="flex gap-3 text-sm text-white/70">
+                      <span className="text-[#ff6b35] font-bold shrink-0">{i + 1}.</span>
                       <span className="leading-relaxed">{r}</span>
                     </li>
                   ))}
@@ -440,7 +454,7 @@ export function Editor({ attemptId, problemId, problem }: EditorProps) {
 
         {/* DRAG HANDLE */}
         <div
-          className="w-1 cursor-col-resize bg-transparent hover:bg-amber-400/50 active:bg-amber-400 shrink-0 transition-colors z-10"
+          className="w-1 cursor-col-resize bg-transparent hover:bg-white/10 active:bg-white/20 shrink-0 transition-colors z-10"
           onMouseDown={() => {
             isDragging.current = true;
             document.body.style.cursor = 'col-resize';
@@ -448,41 +462,41 @@ export function Editor({ attemptId, problemId, problem }: EditorProps) {
         />
 
         {/* RIGHT — Editor or Evaluation */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-white">
+        <div className="flex-1 flex flex-col overflow-hidden bg-[#0a0a0a]">
           {evaluation ? (
             // Evaluation Results View
             <div className="flex-1 overflow-y-auto p-8">
               <div className="max-w-3xl mx-auto space-y-8">
-                <div className="flex items-center justify-between pb-6 border-b border-zinc-200">
-                  <h2 className="text-xl font-bold text-zinc-900">Evaluation Results</h2>
-                  <div className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-xs font-bold uppercase tracking-wider font-mono">
+                <div className="flex items-center justify-between pb-6 border-b border-white/10">
+                  <h2 className="text-xl font-bold text-white">Evaluation Results</h2>
+                  <div className="px-3 py-1 bg-white/5 text-[#ff6b35] border border-white/10 rounded text-xs font-bold uppercase tracking-wider font-mono">
                     Completed
                   </div>
                 </div>
                 
                 {evaluation.map((res: any, i: number) => (
                   <div key={i} className="space-y-4">
-                    <h3 className="text-sm font-bold text-zinc-900 uppercase tracking-widest border-b border-zinc-100 pb-2">{res.stageType}</h3>
+                    <h3 className="text-sm font-bold text-white/90 uppercase tracking-widest border-b border-white/10 pb-2">{res.stageType}</h3>
                     <div className="grid gap-4">
                       {res.feedback.map((item: any, j: number) => {
                         const isPass = item.score >= 4;
                         const isWarn = item.score === 3;
                         return (
-                          <div key={j} className="text-sm p-4 rounded-md border border-zinc-200 bg-zinc-50/50 space-y-3">
+                          <div key={j} className="text-sm p-4 rounded-md border border-white/10 bg-white/5 space-y-3">
                             <div className="flex items-baseline gap-2 mb-1">
-                              <span className={`font-mono text-xs font-bold ${isPass ? 'text-emerald-600' : isWarn ? 'text-amber-600' : 'text-red-600'}`}>
+                              <span className={`font-mono text-xs font-bold ${isPass ? 'text-emerald-500' : isWarn ? 'text-amber-500' : 'text-red-500'}`}>
                                 [{item.score}/5]
                               </span>
-                              <strong className="text-zinc-900">{item.criterion}</strong>
+                              <strong className="text-white/90">{item.criterion}</strong>
                             </div>
                             {item.evidence && (
-                              <div className="pl-3 border-l-2 border-zinc-300 text-xs text-zinc-600 font-mono bg-zinc-100/50 py-1.5">
+                              <div className="pl-3 border-l-2 border-white/20 text-xs text-white/60 font-mono bg-white/[0.02] py-1.5">
                                 {item.evidence}
                               </div>
                             )}
-                            <p className="text-zinc-700 leading-relaxed">{item.concern}</p>
+                            <p className="text-white/80 leading-relaxed">{item.concern}</p>
                             {item.suggestion && (
-                              <p className="text-zinc-500 italic flex gap-1 mt-2">
+                              <p className="text-white/50 italic flex gap-1 mt-2">
                                 <span className="font-bold">↳</span> {item.suggestion}
                               </p>
                             )}
@@ -497,11 +511,11 @@ export function Editor({ attemptId, problemId, problem }: EditorProps) {
           ) : (
             // Editor View
             <>
-              <div className="flex items-center justify-between px-6 py-2.5 border-b border-zinc-100 bg-zinc-50/50 shrink-0">
-                <span className="text-xs font-bold font-mono text-zinc-500 uppercase tracking-wider">
+              <div className="flex items-center justify-between px-6 py-2.5 border-b border-white/10 bg-white/5 shrink-0">
+                <span className="text-xs font-bold font-mono text-white/50 uppercase tracking-wider">
                   {STAGE_META[activeStage].label}
                 </span>
-                <span className="text-xs font-mono text-zinc-500 tabular-nums">
+                <span className="text-xs font-mono text-white/50 tabular-nums">
                   {wordCount} {wordCount === 1 ? 'word' : 'words'}
                 </span>
               </div>
@@ -514,14 +528,14 @@ export function Editor({ attemptId, problemId, problem }: EditorProps) {
                   highlight={(code) => Prism.highlight(code, Prism.languages.javascript, 'javascript')}
                   padding={24}
                   placeholder={STAGE_META[activeStage].placeholder}
-                  className="font-mono text-sm leading-relaxed min-h-full"
+                  className="font-mono text-sm leading-relaxed min-h-full text-white"
                   disabled={attemptStatus !== 'DRAFT'}
                   style={{
                     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
                     backgroundColor: 'transparent',
                     outline: 'none',
                   }}
-                  textareaClassName="focus:outline-none focus:bg-zinc-50/30 transition-colors"
+                  textareaClassName="focus:outline-none focus:bg-white/5 transition-colors"
                 />
               </div>
             </>

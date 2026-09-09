@@ -65,6 +65,21 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Author credit */}
+      <div className="relative z-10 w-full bg-[#0a0a0a] border-t border-white/5 py-3">
+        <p className="text-center text-white/30 text-xs tracking-widest font-mono">
+          Built by{" "}
+          <a
+            href="https://github.com/Rohit-Bhardwaj10"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-white/50 hover:text-white/80 transition-colors underline underline-offset-4"
+          >
+            Rohit Bhardwaj
+          </a>
+        </p>
+      </div>
+
     </div>
   );
 }
